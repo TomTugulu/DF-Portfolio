@@ -1,0 +1,59 @@
+---
+title: "Visualisation Practice"
+output: html_notebook
+---
+```{r}
+data(iris)
+install.packages("plotly")
+library(plotly)
+library(ggcorrplot)
+
+```
+
+```{r}
+
+#Correloplot
+
+head(iris)
+corriris <- iris
+corriris$Species <- as.integer(corriris$Species)
+corr <- round(cor(corriris),2)
+ggcorrplot(corr, method = "circle",  lab = TRUE, hc.order = TRUE)
+
+
+
+```
+
+Using the correlation matrix, we begin to see high correlations amongst many categories. We'll inspect the Length Vs Width first. I expect there to be a reasonably standardised positive correlation on the scatte graph based on this data.
+```{r}
+
+#Scatter Plotly Chart
+
+plot_ly(
+  x = iris$Sepal.Width,
+  y = iris$Sepal.Length,
+  name = iris$Species,
+  type = "scatter",
+  symbol = iris$Species
+)
+
+```
+
+```{r}
+#Scatter Plots (Base R)
+
+qplot(iris$Petal.Length, iris$Petal.Width, colour=iris$Species)
+qplot(iris$Petal.Length, iris$Sepal.Length, colour=iris$Species)
+qplot(iris$Petal.Width, iris$Sepal.Length, colour=iris$Species)
+
+```
+
+```{r}
+#Histogram
+
+ggplot(iris, aes(x=Petal.Width)) + 
+  geom_histogram(color="White", fill="Red", binwidth=0.3)
+```
+
+
+
