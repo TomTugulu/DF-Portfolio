@@ -1,0 +1,153 @@
+---
+title: "Acts of Regression Project"
+output: html_notebook
+---
+#Aim
+The aim of this project is to find what most influences the price of a diamond, and to be able to predict the price of an unseen data set based off the findings.
+
+#Load Libraries
+```{r}
+library(pROC)
+#Displays and analyses ROC curves
+
+library(car)
+#A companion to applied regression
+
+library(caTools)
+#Moving window statistics, GIFs, and other tools
+
+library(ggplot2)
+#Higher level graphing package
+
+library(plotly)
+
+library(ggcorrplot)
+
+library(tidyverse)
+```
+
+
+#Data Sourcing and cleanup
+```{r}
+##Import packages required
+###install.packages("ggcorrplot")
+library(ggcorrplot)
+library(tidyverse)
+
+##Looking to load the data set Diamonds (We lacked the data for a business relevent one.)
+
+Diamonds <- read.csv("S:/Business Solutions/ThomasT/Current/data-fellowship/Regression/Diamonds.csv")
+
+##Data cleanup should occur now, however this data has been pre-cleaned to speed up the process.
+####Would look for Null or incorrect format values that didnt fit and remove the rows/separate from the data.
+
+
+```
+
+
+#Using a Correlograms to identify correlations with price.
+```{r}
+##The aim of this part is to use a Correlograms of the entire dataset to work out what attribute most affects the price of a diamond. Will initially have to alter the categoric values to a numeric one.
+
+Diamonds$cut <- as.integer(Diamonds$cut)
+Diamonds$color <- as.integer(Diamonds$color)
+Diamonds$clarity <- as.integer(Diamonds$clarity)
+
+##Find Correlation between values
+cor(Diamonds)
+
+##9 Decimal places is not ideal, drop it to 2.
+corr <- round(cor(Diamonds),2)
+
+##Show me the gram.
+ggcorrplot(corr, method = "circle",  lab = TRUE, hc.order = TRUE)
+
+###From this, the best correlation of price appears to be carat, so that is what I'll use. 
+```
+
+
+#Split the data into train and test sets
+```{r}
+##In order to check if the prediction works, we need to split the data into training data and test data. I'll split it about 75-25 to give a good amount to work with.
+
+split <- sample.split(Diamonds,SplitRatio = 0.75)
+train <- subset(Diamonds,split==TRUE)
+test <- subset(Diamonds,split==FALSE)
+```
+
+
+#Analyse the curve to best begin the linear prediciton model
+```{r}
+plot(Diamonds$price, Diamonds$carat)
+linearModel <- lm(price ~ carat, data = train)
+plot(linearModel)
+curve(predict(linearModel, data.frame(carat=x)), lwd = 2, col = "dodgerblue",  add=T)
+```
+
+#Plot secondary graph to visualise prediction vs actual value
+```{r}
+test$predicted.linear <- predict(linearModel, test)
+
+pl1 <- test %>% 
+    ggplot(aes(price,predicted.linear)) + 
+    geom_point(alpha=0.5) + 
+    stat_smooth() + 
+    xlab('Actual value of diamond') + 
+    ylab('Predicted value of diamond') + 
+    theme_bw() 
+
+ggplotly(pl1)
+```
+#Find Error based on linear model
+```{r}
+error <- test$price-test$predicted.linear 
+  rmse <- sqrt(mean(error^2)) 
+  rmse 
+
+```
+
+#Plot both non-linear and linear models.
+```{r}
+e <- exp(1)
+linearModel <- lm(price ~ carat, data = train)
+
+#Extra parts kept for posterity.
+##nonLinearModel <- nls(price ~ 327.7013 + 804.2829*e^(1.450356*carat), train)
+##nonLinearModel <- Vectorize(nls(price ~ (327.7013 + 804.2829*e^(+1.450356*x)), train, start = list(x = carat)))
+##curve((327.7013 + 804.2829*e^(+1.450356*x)),lwd=3, col="dodgerblue", add = T)
+
+
+nonLinearModel <- nls(price ~ e^(b*carat) + c, train, start = list(b = 2, c = 0))
+plot(train$carat, train $price, col="Red", pch=16) 
+
+curve(predict(linearModel, data.frame(carat=x)), lwd = 2, col = "dodgerblue",  add=T)
+curve(predict(nonLinearModel, data.frame(carat=x)), lwd = 3, col = "black",  add=T)
+
+```
+
+
+```{r}
+test$predicted.nonlinear <- predict(nonLinearModel, test)
+
+pl1 <- test %>% 
+    ggplot(aes(price,predicted.nonlinear)) + 
+    geom_point(alpha=0.5) + 
+    stat_smooth() + 
+    xlab('Actual value of price') + 
+    ylab('Predicted value of price') + 
+    theme_void() 
+
+ggplotly(pl1)
+```
+
+
+Again like we did with the linear model we can calculate the RMSE. Then we can compare that with the AMSE from the linear model to see if any improvements have been made. 
+
+ 
+
+```{r} 
+error <- test$price-test$predicted.nonlinear 
+rmseNL <- sqrt(mean(error^2)) 
+rmseNL 
+``` 
+From this, we can see the linear model is more accurate than the non-linear one. I would argue however that the non-linear custom equation should theoretically be more accurate, yet I cannot figure out how to make that work. That will be a point for a future project. This can therefore be used on other data sets of similar making to attempt to estimate Diamond prices based on Carat.
